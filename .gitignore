@@ -1,0 +1,38 @@
+# --- Virtuelle Umgebung (wird von install/install.ps1 neu erzeugt) ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Lokale Konfiguration und Geheimnisse (gehoeren nie ins Repo) ---
+config.toml
+ignore.conf
+master.key
+*.key
+status.json
+index.sqlite3
+*.sqlite3
+*.log
+
+# --- Testreste ---
+cryptdrive-test-*/
+lab/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

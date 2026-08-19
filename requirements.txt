@@ -1,0 +1,6 @@
+zstandard>=0.22
+cryptography>=42
+argon2-cffi>=23
+pathspec>=0.12
+pystray>=0.19
+pillow>=10

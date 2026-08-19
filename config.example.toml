@@ -1,0 +1,148 @@
+# cryptdrive Konfiguration
+
+source = "C:/Users/stefa/Documents"
+archive = "G:/Meine Ablage/cryptdrive"
+
+[schedule]
+daily_time = "03:00"
+catch_up = true
+catch_up_grace_minutes = 2
+
+[compression]
+level = 19
+threads = 0
+long_window = true
+skip_extensions = [
+    "zip",
+    "7z",
+    "rar",
+    "gz",
+    "tgz",
+    "bz2",
+    "tbz2",
+    "xz",
+    "txz",
+    "zst",
+    "tzst",
+    "lz4",
+    "lzma",
+    "cab",
+    "arj",
+    "lha",
+    "jar",
+    "war",
+    "whl",
+    "apk",
+    "aar",
+    "crx",
+    "xpi",
+    "nupkg",
+    "vsix",
+    "epub",
+    "docx",
+    "xlsx",
+    "pptx",
+    "odt",
+    "ods",
+    "odp",
+    "odg",
+    "iso",
+    "dmg",
+    "appx",
+    "msix",
+    "pak",
+    "asar",
+    "rpm",
+    "deb",
+    "jpg",
+    "jpeg",
+    "jpe",
+    "jfif",
+    "png",
+    "gif",
+    "webp",
+    "heic",
+    "heif",
+    "avif",
+    "jxl",
+    "j2k",
+    "jp2",
+    "jxr",
+    "mp4",
+    "m4v",
+    "mkv",
+    "webm",
+    "avi",
+    "mov",
+    "wmv",
+    "flv",
+    "f4v",
+    "mpg",
+    "mpeg",
+    "m2ts",
+    "mts",
+    "vob",
+    "3gp",
+    "ogv",
+    "rmvb",
+    "braw",
+    "r3d",
+    "mp3",
+    "aac",
+    "m4a",
+    "m4b",
+    "ogg",
+    "oga",
+    "opus",
+    "wma",
+    "flac",
+    "ape",
+    "alac",
+    "mpc",
+    "spx",
+    "pdf",
+    "woff",
+    "woff2",
+    "swf",
+    "chm",
+    "gpg",
+    "pgp",
+    "age",
+    "enc",
+    "crypt",
+    "kdbx",
+    "qcow2",
+    "vmdk",
+    "vdi",
+    "ova",
+    "safetensors",
+    "gguf",
+    "ggml",
+    "onnx",
+    "npz",
+]
+probe_bytes = "256 KiB"
+probe_min_file_size = "4 MiB"
+probe_min_ratio = 0.95
+
+[crypto]
+argon2_time_cost = 4
+argon2_memory_kib = 262144
+argon2_parallelism = 4
+
+[history]
+max_archive_size = "100 GiB"
+target_ratio = 0.9
+min_change_size = "100 MiB"
+relax_threshold = true
+min_change_size_floor = "8 MiB"
+protect_deletions = true
+
+[ignore]
+use_gitignore = true
+use_git_info_exclude = true
+include_git_dirs = true
+central_file = ""
+extra_patterns = []
+follow_symlinks = false
+max_file_size = 0
