@@ -142,9 +142,22 @@ def cmd_init(args) -> int:
 def cmd_sync(args) -> int:
     from .daemon import setup_logging
     from .sync import run_sync
+    from .util import SingleInstanceLock
     cfg = load_config(args.config)
     setup_logging(cfg, to_console=args.verbose)
     keyring = get_keyring(cfg, args.password)
+
+    # Verhindert, dass diese manuelle Sync mit dem Hintergrunddienst (der
+    # z. B. gerade einen verpassten Lauf nachholt) um dieselbe SQLite-Datei
+    # konkurriert. Ohne dieses Lock kollidieren beide Prozesse mit
+    # "database is locked".
+    lock = SingleInstanceLock(cfg.lock_file)
+    if not lock.acquire():
+        print("Ein anderer cryptdrive-Prozess synchronisiert bereits "
+              "(z. B. der Hintergrunddienst). Bitte 'cryptdrive status' "
+              "abwarten oder spaeter erneut versuchen.", file=sys.stderr)
+        return 3
+
     last = [0.0]
 
     def on_progress(p):
@@ -155,8 +168,11 @@ def cmd_sync(args) -> int:
                   f"{p.files_done}/{p.files_total}  {p.current[-50:]:<50s}",
                   end="", flush=True)
 
-    result = run_sync(cfg, keyring, progress_cb=on_progress if not args.quiet else None,
-                      consolidation=not args.no_consolidate)
+    try:
+        result = run_sync(cfg, keyring, progress_cb=on_progress if not args.quiet else None,
+                          consolidation=not args.no_consolidate)
+    finally:
+        lock.release()
     print("\r" + " " * 100, end="\r")
     print(result.summary())
     if result.consolidated.get("ran"):
@@ -253,6 +269,7 @@ def cmd_restore(args) -> int:
 def cmd_consolidate(args) -> int:
     from .consolidate import consolidate, plan
     from .daemon import setup_logging
+    from .util import SingleInstanceLock
     cfg = load_config(args.config)
     setup_logging(cfg, to_console=args.verbose)
     if args.max_archive_size:
@@ -274,7 +291,19 @@ def cmd_consolidate(args) -> int:
         for line in info["selected"]:
             print("  " + line)
         return 0
-    report = consolidate(cfg, archive, progress_cb=lambda m: print(m), force=args.force)
+
+    # Schreibt Snapshots und loescht Blobs, deshalb dasselbe Lock wie ein
+    # Sync-Lauf: sonst koennte der Hintergrunddienst parallel dieselben
+    # Objekte veraendern.
+    lock = SingleInstanceLock(cfg.lock_file)
+    if not lock.acquire():
+        print("Ein anderer cryptdrive-Prozess ist gerade aktiv. Bitte abwarten.",
+              file=sys.stderr)
+        return 3
+    try:
+        report = consolidate(cfg, archive, progress_cb=lambda m: print(m), force=args.force)
+    finally:
+        lock.release()
     if not report["ran"]:
         print(f"Nichts zu tun. Archiv {fmt_size(report['before'])}, "
               f"Limit {fmt_size(report['limit'])}.")
@@ -307,11 +336,20 @@ def cmd_verify(args) -> int:
 
 
 def cmd_gc(args) -> int:
+    from .util import SingleInstanceLock
     cfg = load_config(args.config)
     keyring = get_keyring(cfg, args.password)
     archive = Archive(cfg.archive_path, keyring, cfg.compression)
-    count, freed = archive.gc()
-    archive.clean_tmp()
+    lock = SingleInstanceLock(cfg.lock_file)
+    if not lock.acquire():
+        print("Ein anderer cryptdrive-Prozess ist gerade aktiv. Bitte abwarten.",
+              file=sys.stderr)
+        return 3
+    try:
+        count, freed = archive.gc()
+        archive.clean_tmp()
+    finally:
+        lock.release()
     print(f"{count} nicht referenzierte Objekte entfernt, {fmt_size(freed)} frei")
     return 0
 
