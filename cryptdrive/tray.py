@@ -64,6 +64,19 @@ def _python_gui_exe() -> str:
     return str(exe)
 
 
+def _real_path(path: Path) -> Path:
+    """Pfad so aufloesen, wie ihn der Explorer sieht.
+
+    Python aus dem Microsoft Store laeuft als MSIX-Paket: Schreibzugriffe unter
+    %LOCALAPPDATA% landen virtualisiert in Packages/<Paket>/LocalCache/Local.
+    Der Explorer kennt diese Umleitung nicht und fuehrt sonst ins Leere.
+    """
+    if os.name != "nt" or "WindowsApps" not in sys.base_prefix + sys.executable:
+        return path
+    # resolve() folgt der Umleitung und liefert den echten Ort der Datei
+    return path.resolve()
+
+
 class Tray:
     def __init__(self, daemon: Daemon):
         self.daemon = daemon
@@ -146,6 +159,7 @@ class Tray:
     @staticmethod
     def _open_path(path: Path):
         try:
+            path = _real_path(path)
             if os.name == "nt":
                 os.startfile(str(path))  # noqa: S606
             else:
