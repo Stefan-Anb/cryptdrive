@@ -163,7 +163,8 @@ class Tray:
         percent = daemon.progress.percent if daemon.progress else 0.0
         try:
             self.icon.icon = _icon_image(daemon.state, percent)
-            self.icon.title = "cryptdrive\n" + "\n".join(daemon.text_lines())[:120]
+            # Windows erlaubt maximal 127 Zeichen im Tooltip (NOTIFYICONDATAW.szTip)
+            self.icon.title = ("cryptdrive\n" + "\n".join(daemon.text_lines()))[:127]
             self.icon.update_menu()
         except Exception:
             log.debug("Tray-Update fehlgeschlagen", exc_info=True)
