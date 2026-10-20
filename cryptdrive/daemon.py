@@ -1,8 +1,10 @@
 """Hintergrunddienst: taeglicher Lauf um 03:00 mit Nachholen verpasster Laeufe."""
 from __future__ import annotations
 
+import faulthandler
 import logging
 import logging.handlers
+import sys
 import threading
 from dataclasses import asdict
 from datetime import datetime, time as dtime, timedelta
@@ -28,10 +30,35 @@ def setup_logging(cfg: Config, level=logging.INFO, to_console: bool = False) -> 
     )
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s"))
     root.addHandler(handler)
+    _install_crash_diagnostics(cfg)
     if to_console:
         console = logging.StreamHandler()
         console.setFormatter(logging.Formatter("%(levelname)-7s %(message)s"))
         root.addHandler(console)
+
+
+_fault_file = None
+
+
+def _install_crash_diagnostics(cfg: Config) -> None:
+    """Haenger und unbehandelte Fehler nachvollziehbar machen (pythonw hat keine Konsole)."""
+    global _fault_file
+    try:
+        _fault_file = open(cfg.log_file.with_name("faulthandler.log"), "a", encoding="utf-8")
+        faulthandler.enable(file=_fault_file, all_threads=True)
+    except Exception:
+        log.debug("faulthandler nicht verfuegbar", exc_info=True)
+
+    def _excepthook(exc_type, exc, tb):
+        log.critical("Unbehandelter Fehler", exc_info=(exc_type, exc, tb))
+
+    def _thread_hook(args):
+        log.critical("Unbehandelter Fehler in Thread %s",
+                     args.thread.name if args.thread else "?",
+                     exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+
+    sys.excepthook = _excepthook
+    threading.excepthook = _thread_hook
 
 
 def parse_daily_time(text: str) -> dtime:

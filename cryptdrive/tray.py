@@ -87,6 +87,10 @@ class Tray:
             "cryptdrive",
             menu=self._menu(),
         )
+        self._dirty = threading.Event()
+        self._closing = threading.Event()
+        threading.Thread(target=self._update_worker, name="cryptdrive-tray-update",
+                         daemon=True).start()
         daemon.listeners.append(self._on_update)
 
     # ---------------- Menue ----------------
@@ -169,19 +173,31 @@ class Tray:
 
     def _quit(self, *_):
         log.info("Tray beendet, Daemon wird gestoppt")
+        self._closing.set()
+        self._dirty.set()
         self.daemon.stop()
         self.icon.stop()
 
     # ---------------- Aktualisierung ----------------
     def _on_update(self, daemon: Daemon):
-        percent = daemon.progress.percent if daemon.progress else 0.0
-        try:
-            self.icon.icon = _icon_image(daemon.state, percent)
-            # Windows erlaubt maximal 127 Zeichen im Tooltip (NOTIFYICONDATAW.szTip)
-            self.icon.title = ("cryptdrive\n" + "\n".join(daemon.text_lines()))[:127]
-            self.icon.update_menu()
-        except Exception:
-            log.debug("Tray-Update fehlgeschlagen", exc_info=True)
+        """Wird vom Sync-Thread aufgerufen und darf ihn nie blockieren."""
+        self._dirty.set()
+
+    def _update_worker(self):
+        """Fasst Updates zusammen (max. eines pro Sekunde), losgeloest vom Sync-Thread."""
+        while not self._closing.is_set():
+            self._dirty.wait()
+            self._dirty.clear()
+            daemon = self.daemon
+            percent = daemon.progress.percent if daemon.progress else 0.0
+            try:
+                self.icon.icon = _icon_image(daemon.state, percent)
+                # Windows erlaubt maximal 127 Zeichen im Tooltip (NOTIFYICONDATAW.szTip)
+                self.icon.title = ("cryptdrive\n" + "\n".join(daemon.text_lines()))[:127]
+                self.icon.update_menu()
+            except Exception:
+                log.debug("Tray-Update fehlgeschlagen", exc_info=True)
+            self._closing.wait(1.0)
 
     def run(self) -> None:
         self._on_update(self.daemon)
